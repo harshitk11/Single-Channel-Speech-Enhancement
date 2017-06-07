@@ -1,0 +1,17 @@
+http://www.assta.org/sst/2006/sst2006-45.pdf
+
+http://www.kecl.ntt.co.jp/icl/signal/iwaenc03/cdrom/data/0020.pdf
+
+https://gist.github.com/jameslyons/554325efb2c05da15b31
+
+http://www.ee.ic.ac.uk/hp/staff/dmb/voicebox/doc/voicebox/specsub.html
+
+http://ecs.utdallas.edu/loizou/speech/software.htm
+
+http://practicalcryptography.com/miscellaneous/machine-learning/tutorial-spectral-subraction/
+
+https://www.ee.iitb.ac.in/~pcpandey/notes/misc/NCC2013_santosh_22Nov12D.pdf
+
+http://file.scirp.org/pdf/JSIP_2014051615300944.pdf
+
+http://plaza.ufl.edu/hejiaxiu/speech.htm
