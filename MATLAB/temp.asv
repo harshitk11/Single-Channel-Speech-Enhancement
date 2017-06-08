@@ -24,9 +24,9 @@ figure
 plot(abs(yf));
 title('Fourier transform of original signal');
 
-yfc = yf(1:513);
+yfc = yf(1:512);
 
-yfc_fl = fliplr(yfc(2:512));
+yfc_fl = fliplr(yfc);
 fl = [abs(yfc) abs(yfc_fl)];
 flf = ifft(fl);
 yr = ifft(yf);
@@ -43,16 +43,3 @@ title('Reconstructed Signal with negative frequencies removed');
 figure
 plot(abs(flf));
 title('Flipped and added');
-
-
-
-
-%--------------------------------------------------------------------%
-klm = fliplr((barkplot(tdb(:,54)))');
-slm = [(barkplot(tdb(:,54)))', klm];
-figure
-plot(10*log10(abs(ft(:,54)).*abs(ft(:,54))));
-figure
-plot(10*log10(abs(ft_temp(:,54)).*abs(ft_temp(:,54))));
-hold on
-plot(slm)
