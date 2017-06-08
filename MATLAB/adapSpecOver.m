@@ -9,14 +9,20 @@
 
 %% READING THE SIGNAL
 
-cleansp1 = audioread('C:\Users\admin\Documents\MATLAB\sp21_train_sn10.wav');        % clean speech
-[rawsig1,fs1] = audioread('C:\Users\admin\Documents\MATLAB\sp21_train_sn10.wav');  % raw signals
+cleansp1 = audioread('C:\Users\admin\Documents\MATLAB\sp01_car_sn5.wav');        % clean speech
+[rawsig1,fs1] = audioread('C:\Users\admin\Documents\MATLAB\sp01_car_sn5.wav');  % raw signals
 fs = 8000;
 [p,q] = rat(fs/fs1);
 
 % Resampling the signal to 8kHz
 rawsig = resample(rawsig1,p,q);
 cleansp = resample(cleansp1,p,q);
+
+% Calling the speech_enhancement function. This function calculate the
+% noise masking threshold, and the values of alpha and beta on the basis of
+% psychoacoustic modelling.
+
+[alpha,beta] = speech_enhancement(rawsig,fs);
 
 %% SEGMENTATION INTO FRAMES
 
