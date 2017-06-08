@@ -1,11 +1,14 @@
 % Drop me a mail at 'harshitk11@gmail.com' before proceeding with this
 % section, else you'll be doomed for life.
 
+function [alpha,beta] = speech_enhancement(signal,fs)
+
 % Assuming Noise detection is done. We are now proceeding with the
 % substractive type algorithm.
 
 % Reading the signal
-[orig,fs] = audioread('sp01_airport_sn15.wav');
+% [orig,fs] = audioread('sp21_train_sn10.wav');
+orig = signal;
 %----------------------------------------------------------------------%
 % Designing FIR filter for to increase discrimination between speech and
 % noise signals.
@@ -229,10 +232,10 @@ for i = 1:framenum
     tdb_f(:,i) = [(barkplot(tdb(:,i)))', klm]';
 end
 
-figure
-plot(10*log10(abs(ft_temp(:,54)).*abs(ft_temp(:,54))));
-hold on
-plot(tdb_f(:,54));
+% figure
+% plot(10*log10(abs(ft_temp(:,54)).*abs(ft_temp(:,54))));
+% hold on
+% plot(tdb_f(:,54));
 
 %% CALCULATION OF ALPHA AND BETA
 % Calculating the values of alpha and beta using the masking parameters
@@ -242,4 +245,5 @@ beta = zeros(256,framenum);
 
 for i = 1:framenum
     [alpha(:,i), beta(:,i)] = noise_mask(tdb_f(:,i));
+end
 end
