@@ -1,5 +1,5 @@
 % Drop me a mail at 'harshitk11@gmail.com' before proceeding with this
-% section.
+% section, else you'll be doomed for life.
 
 % Assuming Noise detection is done. We are now proceeding with the
 % substractive type algorithm.
@@ -33,6 +33,7 @@ frame = frames(fout);
 N = 256;
 ft = fft(frame,N);
 % Symmetric signal, so we'll take only the positive frequency side
+ft_temp = ft;
 ft = ft(1:128,:);
 
 %Frequency axis
@@ -52,9 +53,10 @@ f = df*(0:(N/2)-1);
 % Now,each of the frames of the signal is divided into bark scales.
 
 len = size(ft);
+framenum = len(2);
 % Array to store the bark scales of all the frames 
-bband = zeros(18,len(2));   
-for i = 1:len(2)
+bband = zeros(18,framenum);   
+for i = 1:framenum
     bband(:,i) = bark(abs(ft(:,i)));
 end
 
@@ -88,8 +90,8 @@ bband_db = 10*log10(bband);
 % xlabel('Critical band k');
 % ylabel('Sf_dB');
 % 
-% etemp = zeros(35,len(2));
-% for i = 1:len(2)
+% etemp = zeros(35,framenum);
+% for i = 1:framenum
 %     etemp(:,i) = conv(bband(:,i),Sf);
 % end
 % 
@@ -147,10 +149,10 @@ e = S*bband;
 % 1 arithemetic mean)
 % gm = geometric mean ( same as am )
 
-am = zeros(len(2),1);
-gm = zeros(len(2),1);
+am = zeros(framenum,1);
+gm = zeros(framenum,1);
 
-for i = 1:len(2)
+for i = 1:framenum
     am(i) = mean(abs(ft(:,i)).*abs(ft(:,i)));
     gm(i) = geo_mean(abs(ft(:,i)).*abs(ft(:,i)));
 end
@@ -160,8 +162,8 @@ sfm_db_min = -60;
 sfm_db = 10*log10(gm./am);
 
 % Tonality coefficient : alpha_sfm
-alpha_sfm = zeros(len(2),1);
-for i = 1:len(2)
+alpha_sfm = zeros(framenum,1);
+for i = 1:framenum
     alpha_sfm(i) = min((sfm_db(i)/sfm_db_min),1);
 end
 
@@ -184,7 +186,7 @@ O = Otemp(1:18);
 % Substraction of the relative threshold offset from the excitation
 % pattern in the dB domain.
 edb = 10*log10(e);
-Odbrep = repmat(Odb,1,len(2));
+Odbrep = repmat(Odb,1,framenum);
 
 % Need to check the validity of the next statement. Whether to use 'abs' or
 % not
@@ -208,5 +210,36 @@ xlabel('FFT bins');
 % REFER TO PAPER 25 AND 26
 % t : masking threshold offset
 % Converting the spread threshold back to the bark domain
+
+
 t = power(10, tdb/10);
 
+
+
+%% ASSUMING THAT RENORMALIZATION IS DONE AND NOW WE WANT TO INCORPORATE THE MASKING MODELS IN ALPHA AND BETA
+
+
+% Converting the bark domain from 128 points to 256 points, so that the
+% masking can be applied to the entire 256 point fft. 
+
+tdb_f = zeros(256,framenum);
+
+for i = 1:framenum
+    klm = fliplr((barkplot(tdb(:,i)))');
+    tdb_f(:,i) = [(barkplot(tdb(:,i)))', klm]';
+end
+
+figure
+plot(10*log10(abs(ft_temp(:,54)).*abs(ft_temp(:,54))));
+hold on
+plot(tdb_f(:,54));
+
+%% CALCULATION OF ALPHA AND BETA
+% Calculating the values of alpha and beta using the masking parameters
+
+alpha = zeros(256,framenum);
+beta = zeros(256,framenum);
+
+for i = 1:framenum
+    [alpha(:,i), beta(:,i)] = noise_mask(tdb_f(:,i));
+end
