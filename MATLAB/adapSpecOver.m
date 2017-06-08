@@ -5,13 +5,12 @@
 % Most of the code taken from noise_estimator_1.m. Here parameters alpha
 % and beta have been introduced, which is made to change dynamically with
 % the frames.
-clear;
-clc;
+
 
 %% READING THE SIGNAL
 
-cleansp1 = audioread('C:\Users\admin\Documents\MATLAB\sp01_car_sn5.wav');        % clean speech
-[rawsig1,fs1] = audioread('C:\Users\admin\Documents\MATLAB\sp01_car_sn5.wav');  % raw signals
+cleansp1 = audioread('C:\Users\admin\Documents\MATLAB\sp21_train_sn10.wav');        % clean speech
+[rawsig1,fs1] = audioread('C:\Users\admin\Documents\MATLAB\sp21_train_sn10.wav');  % raw signals
 fs = 8000;
 [p,q] = rat(fs/fs1);
 
@@ -62,19 +61,19 @@ sindex = find(D > dthresh);
 noimag = zeros(winleng,framenum);   %% original noise magnitude estimates 
 noimag(:,1) = sigmag(:,1);          
 % Suppose the first frame only contains noise. 
-alpha = 0.9;
+alpha1 = 0.9;
 % N_(k) = (1-alpha)*X_i(k) + alpha*N_i(k-1)
-beta = 2;
+beta1 = 2;
 % test if X_i(k) > beta*N_i(k-1)
 
 for l = 1:winleng   %% for each freq bin ( fft length = window length)
     for k = 2:framenum  %% for each frame
         %sigmag(l,k);
         %beta*noimag(l,k-1);
-        if sigmag(l,k) > beta*noimag(l,k-1)
+        if sigmag(l,k) > beta1*noimag(l,k-1)
             noimag(l,k) = noimag(l,k-1);
         else
-            noiest = (1-alpha)*sigmag(l,k) + alpha*noimag(l,k-1);
+            noiest = (1-alpha1)*sigmag(l,k) + alpha1*noimag(l,k-1);
             noimag(l,k) = noiest;
         end
     end
@@ -85,7 +84,7 @@ for k = 1:framenum
     noimag(:,k) = mean(noimag(:,k:min(k+10,framenum)),2);
 end
 
-%% ADAPTIVE SPECTRAL OVERSUBSTRACTION
+%% ADAPTIVE SPECTRAL OVERSUBSTRACTION (BASIC MODEL)
 % At this point we have an estimete of the noise. Now we need to do
 % spectral substraction. We will vary the value of alpha and beta (as
 % defined in paper 26) to get a rough estimate of the clean speech. After
@@ -98,7 +97,7 @@ end
 % modified noise spectrum estimates
 % = original estimates * overestimation factor
 
-
+noimag = noimag * 1;
 % Noisy signal power : sigpow
 % Noise power        : noipow
 
@@ -108,15 +107,15 @@ noipow = noimag.*noimag;
 NSNR = nsnr(sigpow,noipow);
 
 
-% Calculating the over-substraction factor : alpha
-alpha = zeros(framenum,1);
+% Calculating the over-substraction factor : alpha1
+alpha1 = zeros(framenum,1);
 for i = 1:framenum
     if (NSNR(i) >= 20)
-        alpha(i) = 1;
+        alpha1(i) = 1;
     elseif (NSNR(i) >=(-6) && NSNR(i) < 20)
-        alpha(i) = 4 - (3/20)*NSNR(i);
+        alpha1(i) = 4 - (3/20)*NSNR(i);
     elseif (NSNR(i) < (-6))
-        alpha(i) = 4.9;
+        alpha1(i) = 4.9;
     end
 end
 
@@ -124,23 +123,36 @@ end
 % beta should be in the range 0.005 to 0.02
 % Fixing the value of beta to 0.01
 
-beta = 0.005;
+beta1 = 0.01;
 
 % denoipow : denoised signal power
 denoipow = zeros(winleng,framenum);
 for i = 1:framenum
     for j = 1:winleng
-        if (sigpow(j,i)-alpha(i)*noipow(j,i)) > (beta*noipow(j,i))
-            denoipow(j,i) = sigpow(j,i) - alpha(i)*noipow(j,i);
+        if (sigpow(j,i)-alpha1(i)*noipow(j,i)) > (beta1*noipow(j,i))
+            denoipow(j,i) = sigpow(j,i) - alpha1(i)*noipow(j,i);
         else
-            denoipow(j,i) = beta * noipow(j,i);
+            denoipow(j,i) = beta1 * noipow(j,i);
         end
     end
 end
 
-magtil = sqrt(denoipow); % magnitude of the rogh estimate of the clean speech 
+%magtil = sqrt(denoipow); % magnitude of the rogh estimate of the clean speech 
 
 % Now we need to introduce masking based on psychoacoustic modelling.
+%% PSYCHOACOUSTIC MASKING 
+maskpow = zeros(winleng,framenum);
+for i = 1:framenum
+    for j = 1:winleng
+        if (denoipow(j,i)-alpha(j,i)*noipow(j,i)) > (beta(j,i)*noipow(j,i))
+            maskpow(j,i) = denoipow(j,i) - alpha(j,i)*noipow(j,i);
+        else
+            maskpow(j,i) = beta(j,i) * noipow(j,i);
+        end
+    end
+end
+
+magtil = sqrt(maskpow);
 
 %% CODE COPIED FRON NOISE_ESTIMATOR_1
 
