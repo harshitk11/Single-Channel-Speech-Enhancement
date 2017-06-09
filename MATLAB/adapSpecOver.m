@@ -9,8 +9,8 @@
 
 %% READING THE SIGNAL
 
-cleansp1 = audioread('C:\Users\admin\Documents\MATLAB\sp01_car_sn5.wav');        % clean speech
-[rawsig1,fs1] = audioread('C:\Users\admin\Documents\MATLAB\sp01_car_sn5.wav');  % raw signals
+cleansp1 = audioread('C:\Users\admin\Documents\MATLAB\sp21_train_sn10.wav');        % clean speech
+[rawsig1,fs1] = audioread('C:\Users\admin\Documents\MATLAB\sp21_train_sn10.wav');  % raw signals
 fs = 8000;
 [p,q] = rat(fs/fs1);
 
@@ -18,11 +18,7 @@ fs = 8000;
 rawsig = resample(rawsig1,p,q);
 cleansp = resample(cleansp1,p,q);
 
-% Calling the speech_enhancement function. This function calculate the
-% noise masking threshold, and the values of alpha and beta on the basis of
-% psychoacoustic modelling.
 
-[alpha,beta] = speech_enhancement(rawsig,fs);
 
 %% SEGMENTATION INTO FRAMES
 
@@ -112,7 +108,13 @@ noipow = noimag.*noimag;
 
 NSNR = nsnr(sigpow,noipow);
 
+%------------------------------------------------------------------------%
+% Calling the speech_enhancement function. This function calculate the
+% noise masking threshold, and the values of alpha and beta on the basis of
+% psychoacoustic modelling.
 
+[alpha,beta] = speech_enhancement(rawsig,fs,noimag);
+%------------------------------------------------------------------------%
 % Calculating the over-substraction factor : alpha1
 alpha1 = zeros(framenum,1);
 for i = 1:framenum
@@ -239,7 +241,7 @@ snr_out = 10*log(sum(sigest.^2) / sum((rawsig(1:dataleng) - sigest).^2))
 
 % Plot
 t = (1:dataleng)/fs;
-figure(1);
+figure
 subplot(3,1,1), plot(t,cleansp(1:dataleng));
 xlabel('Time (s)');
 title('Clean speech');
