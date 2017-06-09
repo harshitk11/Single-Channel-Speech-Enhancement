@@ -1,3 +1,5 @@
+% Based on paper 18
+
 % Critical band analysis is performed on the FFT power spectrum by adding
 % up the energies in each critical band k
 
