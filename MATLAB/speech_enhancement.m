@@ -1,7 +1,7 @@
 % Drop me a mail at 'harshitk11@gmail.com' before proceeding with this
 % section, else you'll be doomed for life.
 
-function [alpha,beta] = speech_enhancement(signal,fs)
+function [alpha,beta] = speech_enhancement(signal,fs,noimag)
 
 % Assuming Noise detection is done. We are now proceeding with the
 % substractive type algorithm.
@@ -177,10 +177,10 @@ for k = 1:18
 end
 
 %%
-figure
-plot(Odb,'*');
-ylabel('Relative Threshold (in dB)');
-xlabel('Critical Band Number k');
+% figure
+% plot(Odb,'*');
+% ylabel('Relative Threshold (in dB)');
+% xlabel('Critical Band Number k');
 
 Otemp = power(10,Odb/10);
 O = Otemp(1:18);
@@ -209,6 +209,53 @@ title('CALCULATION OF PERCEPTUAL THRESHOLD');
 ylabel('dB');
 xlabel('FFT bins');
 %------------------------------------------------------------------------%
+%% MODIFICATION IN MASKING THRESHOLD SINCE WE ARE USING AN ESTIMATE OF THE CLEAN SIGNAL (REFER PAPER 26 SECTION 4)
+
+L = 10;
+noipow = noimag.*noimag;
+noiavg = (mean(noimag,2));  % Estimating the average noise power across all frames
+%noiavg = noiavg_temp(1:128);
+
+% corr : correction to be made in the noise masking threshold since we are
+% using en estimate of the clean speech and not the actual clean speech.
+corr_temp = zeros(length(noiavg),framenum);
+% The last L frames are not evaluated.
+
+for i = 1:framenum-L
+    buf = zeros(length(noiavg),L);
+    k = 1;
+    for j = i:i+L-1
+        buf(:,k) = abs(abs(noipow(:,j)-abs(noiavg.*noiavg))); 
+        k=k+1;
+    end
+    foo = sum(buf);
+    [foomax,fooind] = max(foo);
+    corr_temp(:,i) = buf(:,fooind);
+end
+
+% Maxima is not taken for the last L frames. The difference between the
+% noise power and the average value is directly assigned to the correction
+% factor.
+
+corr_temp(:,(framenum-L+1:framenum)) =  abs(abs(noipow(:,(framenum-L+1:framenum))-abs(noiavg.*noiavg)));
+
+% Converting the correction factor to the bark domain.
+
+corr_bband = zeros(18,framenum);   
+for i = 1:framenum
+    corr_bband(:,i) = bark(abs(sqrt(corr_temp(:,i))));
+end
+
+% Correction : corr is in dB domain
+corr = 10*log10(corr_bband);
+
+% The modificationof the threshold computation hast to be made for high
+% frequency domain (critical band >12)
+tdb_mod = tdb;
+tdb_mod(13:18,:) = tdb(13:18,:) - abs(corr(13:18,:));
+
+hold on
+plot(barkplot(tdb_mod(:,54)),'o');
 %% RENORMALIZATION
 % REFER TO PAPER 25 AND 26
 % t : masking threshold offset
@@ -224,6 +271,8 @@ t = power(10, tdb/10);
 
 % Converting the bark domain from 128 points to 256 points, so that the
 % masking can be applied to the entire 256 point fft. 
+
+ tdb = tdb_mod;
 
 tdb_f = zeros(256,framenum);
 
