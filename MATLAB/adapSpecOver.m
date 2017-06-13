@@ -9,8 +9,8 @@
 
 %% READING THE SIGNAL
 
-cleansp1 = audioread('C:\Users\admin\Documents\MATLAB\sp21_train_sn10.wav');        % clean speech
-[rawsig1,fs1] = audioread('C:\Users\admin\Documents\MATLAB\sp21_train_sn10.wav');  % raw signals
+cleansp1 = audioread('C:\Users\admin\Documents\MATLAB\DENOISED\sp02.wav');        % clean speech
+[rawsig1,fs1] = audioread('C:\Users\admin\Documents\MATLAB\NOISY SIGNALS\sp02_car_sn0.wav');  % raw signals
 fs = 8000;
 [p,q] = rat(fs/fs1);
 
@@ -112,8 +112,9 @@ NSNR = nsnr(sigpow,noipow);
 % Calling the speech_enhancement function. This function calculate the
 % noise masking threshold, and the values of alpha and beta on the basis of
 % psychoacoustic modelling.
-
-[alpha,beta] = speech_enhancement(rawsig,fs,noimag);
+%%
+[alpha,beta,G] = speech_enhancement(rawsig,fs,noimag);
+%%
 %------------------------------------------------------------------------%
 % Calculating the over-substraction factor : alpha1
 alpha1 = zeros(framenum,1);
@@ -160,8 +161,10 @@ for i = 1:framenum
     end
 end
 
-magtil = sqrt(maskpow);
+% magtil = sqrt(maskpow);
 
+percepfilt = G.*sigmag;
+magtil = percepfilt;
 %% CODE COPIED FRON NOISE_ESTIMATOR_1
 
 
@@ -265,7 +268,7 @@ title('Enhanced speech');
 % soundsc(rawsig,fs);
 % pause;
 % soundsc(sigest,fs);
-audiowrite('C:\Users\admin\Documents\MATLAB\NOISY SIGNALS\buc_5db_denoised.wav',sigest,fs);
+audiowrite('C:\Users\admin\Documents\MATLAB\DENOISED\sp02_car_sn0_denoised.wav',sigest,fs);
 
 
 % For showing the interpolation

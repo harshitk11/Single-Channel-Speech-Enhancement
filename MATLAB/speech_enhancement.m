@@ -1,7 +1,7 @@
 % Drop me a mail at 'harshitk11@gmail.com' before proceeding with this
 % section, else you'll be doomed for life.
 
-function [alpha,beta] = speech_enhancement(signal,fs,noimag)
+function [alpha,beta,G] = speech_enhancement(signal,fs,noimag)
 
 % Assuming Noise detection is done. We are now proceeding with the
 % substractive type algorithm.
@@ -196,18 +196,14 @@ Odbrep = repmat(Odb,1,framenum);
 tdb = edb - abs(Odbrep);    % Masking threshold in dB   
 %r = power(10,log10(e) - (Odb/10));
 
-figure
-plot(barkplot(bband_db(:,54)));
-hold on
-plot(barkplot(edb(:,54)));
-hold on
-plot(barkplot(tdb(:,54)));
-hold on
-plot(10*log10(abs(ft(:,54)).*abs(ft(:,54))));
-legend('Bark band in dB','Spread spectrum in dB','Masking threshold in dB','Power of signal in dB');
-title('CALCULATION OF PERCEPTUAL THRESHOLD');
-ylabel('dB');
-xlabel('FFT bins');
+
+
+%% CALCULATION OF GAIN AFTER CONVOLUTION WITH THE SPREADING FUNCTION ( TO BE USED IN THE RENORMALIZATION STEP)
+
+% bband*spreading_function -> e
+% gain = e/bband
+
+gain = e./bband;
 %------------------------------------------------------------------------%
 %% MODIFICATION IN MASKING THRESHOLD SINCE WE ARE USING AN ESTIMATE OF THE CLEAN SIGNAL (REFER PAPER 26 SECTION 4)
 
@@ -243,49 +239,98 @@ corr_temp(:,(framenum-L+1:framenum)) =  abs(abs(noipow(:,(framenum-L+1:framenum)
 
 corr_bband = zeros(18,framenum);   
 for i = 1:framenum
-    corr_bband(:,i) = bark(abs(sqrt(corr_temp(:,i))));
+    corr_bband(:,i) = bark(abs(sqrt(corr_temp(:,i))));  % Using sqrt() because the bark() function squares its input and then evaluates the output
 end
 
 % Correction : corr is in dB domain
 corr = 10*log10(corr_bband);
 
-% The modificationof the threshold computation hast to be made for high
+% The modification of the threshold computation has to be made for high
 % frequency domain (critical band >12)
 tdb_mod = tdb;
-tdb_mod(13:18,:) = tdb(13:18,:) - abs(corr(13:18,:));
+tdb_mod(15:18,:) = tdb(15:18,:) - abs(corr(15:18,:));
+% tdb_mod = tdb - abs(corr);
 
-hold on
-plot(barkplot(tdb_mod(:,54)),'o');
-%% RENORMALIZATION
+
+%------------------------------------------------------------------------%
+%% RENORMALIZATION (TO BE USED ONLY WHEN CALCULATING THE VALUE OF ALPHA AND BETA)(NOT TO BE USED WITH PERCEPTUAL FILTER)
 % REFER TO PAPER 25 AND 26
 % t : masking threshold offset
 % Converting the spread threshold back to the bark domain
 
+% Since the spreading function increases the energy estimates in each band,
+% it can be compensated at the renormalization stage "by multiplying each
+% t(i) by the inverse of the energy gain, assuming a uniform energy of 1 in
+% each band"
 
-t = power(10, tdb/10);
+
+
+t = power(10, tdb_mod/10);
+t_nom = t./gain;
+tdb_nom = 10*log10(t_nom);
+
+% %% FACTORING IN THE VALUES OF ABSOLUTE THRESHOLD
+% tdb_abs_bark = abs_threshold(signal);
+% tf_bark = zeros(18,framenum);
+% for i = 1:framenum
+%     tf_bark(:,i) = max(tdb_abs_bark,tdb_nom(:,i));
+% end
+
+figure
+plot(barkplot(bband_db(:,54)));
+hold on
+plot(barkplot(edb(:,54)));
+hold on
+plot(barkplot(tdb(:,54)));
+hold on
+plot(10*log10(abs(ft(:,54)).*abs(ft(:,54))));
+hold on
+plot(barkplot(tdb_mod(:,54)),'o');
+hold on
+plot(barkplot(tdb_nom(:,54)),'*');
+hold on
+legend('Bark band in dB','Spread spectrum in dB','Masking threshold in dB','Power of signal in dB','Modified threshold','Renormalized threshold');
+title('CALCULATION OF PERCEPTUAL THRESHOLD');
+ylabel('dB');
+xlabel('FFT bins');
 
 
 
-%% ASSUMING THAT RENORMALIZATION IS DONE AND NOW WE WANT TO INCORPORATE THE MASKING MODELS IN ALPHA AND BETA
+%% INCORPORATING THE MASKING MODELS IN ALPHA AND BETA
 
 
 % Converting the bark domain from 128 points to 256 points, so that the
 % masking can be applied to the entire 256 point fft. 
 
- tdb = tdb_mod;
-
+% Comment the following line if you don't want to use the modification in
+% the threshold calculation.
+%  t_temp = tdb_mod; 
+t_temp = tdb_nom;
+% t_temp = tf_bark;
 tdb_f = zeros(256,framenum);
 
 for i = 1:framenum
-    klm = fliplr((barkplot(tdb(:,i)))');
-    tdb_f(:,i) = [(barkplot(tdb(:,i)))', klm]';
+    klm = fliplr((barkplot(t_temp(:,i)))');
+    tdb_f(:,i) = [(barkplot(t_temp(:,i)))', klm]';
 end
 
+t_f = power(10,(tdb_f/10));
 % figure
 % plot(10*log10(abs(ft_temp(:,54)).*abs(ft_temp(:,54))));
 % hold on
 % plot(tdb_f(:,54));
+%% PERCEPTUAL WEIGHING FILTER (DO NOT USE WITH CALCULATION OF ALPHA AND BETA)
+winleng = 256;
+G = zeros(winleng,framenum);
+one = ones(winleng,1);
 
+
+
+for i = 1:framenum
+    footemp = t_f(:,i)./ noiavg;
+    footempa = [footemp one];
+    G(:,i) =  min(footempa,[],2); 
+end
 %% CALCULATION OF ALPHA AND BETA
 % Calculating the values of alpha and beta using the masking parameters
 
@@ -293,6 +338,6 @@ alpha = zeros(256,framenum);
 beta = zeros(256,framenum);
 
 for i = 1:framenum
-    [alpha(:,i), beta(:,i)] = noise_mask(tdb_f(:,i));
+    [alpha(:,i), beta(:,i)] = noise_mask(t_f(:,i));
 end
 end
