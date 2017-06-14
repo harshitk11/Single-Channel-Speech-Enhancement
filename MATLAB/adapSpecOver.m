@@ -9,8 +9,8 @@
 
 %% READING THE SIGNAL
 
-cleansp1 = audioread('C:\Users\admin\Documents\MATLAB\DENOISED\sp02.wav');        % clean speech
-[rawsig1,fs1] = audioread('C:\Users\admin\Documents\MATLAB\NOISY SIGNALS\sp02_car_sn0.wav');  % raw signals
+cleansp1 = audioread('C:\Users\admin\Documents\MATLAB\DENOISED\sp03.wav');        % clean speech
+[rawsig1,fs1] = audioread('C:\Users\admin\Documents\MATLAB\NOISY SIGNALS\sp03_car_sn15.wav');  % raw signals
 fs = 8000;
 [p,q] = rat(fs/fs1);
 
@@ -160,11 +160,16 @@ for i = 1:framenum
         end
     end
 end
-
+% The following line calculates alpha and beta based on the masking model.
+% (Refer paper 18)
 % magtil = sqrt(maskpow);
 
+% The following line calculates a perceptual filter based on the masking
+% model. (Refer paper 26)
 percepfilt = G.*sigmag;
 magtil = percepfilt;
+
+% At a time you can use any one of the above models.
 %% CODE COPIED FRON NOISE_ESTIMATOR_1
 
 
@@ -256,7 +261,7 @@ plot(t,sigest);
 xlabel('Time (s)');
 title('Enhanced speech');
 
-figure(2)
+figure
 subplot(3,1,1),specgram(cleansp(1:dataleng),256,fs);
 title('Clean speech');
 subplot(312),specgram(rawsig(1:dataleng),256,fs);
@@ -268,7 +273,7 @@ title('Enhanced speech');
 % soundsc(rawsig,fs);
 % pause;
 % soundsc(sigest,fs);
-audiowrite('C:\Users\admin\Documents\MATLAB\DENOISED\sp02_car_sn0_denoised.wav',sigest,fs);
+audiowrite('C:\Users\admin\Documents\MATLAB\DENOISED\sp03_car_sn15_denoised.wav',sigest,fs);
 
 
 % For showing the interpolation
