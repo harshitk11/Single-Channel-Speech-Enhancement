@@ -269,12 +269,12 @@ t = power(10, tdb_mod/10);
 t_nom = t./gain;
 tdb_nom = 10*log10(t_nom);
 
-% %% FACTORING IN THE VALUES OF ABSOLUTE THRESHOLD
-% tdb_abs_bark = abs_threshold(signal);
-% tf_bark = zeros(18,framenum);
-% for i = 1:framenum
-%     tf_bark(:,i) = max(tdb_abs_bark,tdb_nom(:,i));
-% end
+%% FACTORING IN THE VALUES OF ABSOLUTE THRESHOLD
+tdb_abs_bark = abs_threshold(signal);
+tf_bark = zeros(18,framenum);
+for i = 1:framenum
+    tf_bark(:,i) = max(tdb_abs_bark,tdb_nom(:,i));
+end
 
 figure
 plot(barkplot(bband_db(:,54)));
@@ -288,6 +288,8 @@ hold on
 plot(barkplot(tdb_mod(:,54)),'o');
 hold on
 plot(barkplot(tdb_nom(:,54)),'*');
+hold on
+plot(barkplot(tf_bark(:,54)),'-');
 hold on
 legend('Bark band in dB','Spread spectrum in dB','Masking threshold in dB','Power of signal in dB','Modified threshold','Renormalized threshold');
 title('CALCULATION OF PERCEPTUAL THRESHOLD');
@@ -305,8 +307,8 @@ xlabel('FFT bins');
 % Comment the following line if you don't want to use the modification in
 % the threshold calculation.
 %  t_temp = tdb_mod; 
-t_temp = tdb_nom;
-% t_temp = tf_bark;
+% t_temp = tdb_nom;
+t_temp = tf_bark;
 tdb_f = zeros(256,framenum);
 
 for i = 1:framenum
