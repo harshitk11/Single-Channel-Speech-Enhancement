@@ -9,8 +9,8 @@
 
 %% READING THE SIGNAL
 
-cleansp1 = audioread('C:\Users\admin\Documents\MATLAB\DENOISED\sp03.wav');        % clean speech
-[rawsig1,fs1] = audioread('C:\Users\admin\Documents\MATLAB\NOISY SIGNALS\sp03_car_sn15.wav');  % raw signals
+cleansp1 = audioread('C:\Users\admin\Documents\MATLAB\sp01.wav');        % clean speech
+[rawsig1,fs1] = audioread('C:\Users\admin\Documents\MATLAB\sp01_car_sn15.wav');  % raw signals
 fs = 8000;
 [p,q] = rat(fs/fs1);
 
@@ -54,7 +54,7 @@ for k=1:framenum
 end
 D=D/max(D);
 dthresh = 0.05;
-nindex = find(D <= dthresh);
+nindex = find(D <= dthresh);    
 sindex = find(D > dthresh);
 
 % ALGORITHM BASED ON PAPER 11
@@ -98,6 +98,7 @@ end
 
 % modified noise spectrum estimates
 % = original estimates * overestimation factor
+% Taking overeestimation factor = 1 
 
 noimag = noimag * 1;
 % Noisy signal power : sigpow
@@ -112,8 +113,7 @@ NSNR = nsnr(sigpow,noipow);
 % Calling the speech_enhancement function. This function calculate the
 % noise masking threshold, and the values of alpha and beta on the basis of
 % psychoacoustic modelling.
-%%
-[alpha,beta,G] = speech_enhancement(rawsig,fs,noimag);
+
 %%
 %------------------------------------------------------------------------%
 % Calculating the over-substraction factor : alpha1
@@ -146,9 +146,18 @@ for i = 1:framenum
     end
 end
 
-%magtil = sqrt(denoipow); % magnitude of the rogh estimate of the clean speech 
+%magtil = sqrt(denoipow); % magnitude of the rough estimate of the clean speech 
 
+% clean_est is the estimate of the noiseless signal in the frequency
+% domain. clean_est is passed as an argument to the 
+% function speech_enhancement().
+clean_est = sqrt(denoipow);
 % Now we need to introduce masking based on psychoacoustic modelling.
+% The psychoacoustic modelling uses the rough estimete of the clean speech.
+
+%%
+[alpha,beta,G] = speech_enhancement(clean_est,fs,noimag,rawsig);
+
 %% PSYCHOACOUSTIC MASKING 
 maskpow = zeros(winleng,framenum);
 for i = 1:framenum
@@ -273,12 +282,12 @@ title('Enhanced speech');
 % soundsc(rawsig,fs);
 % pause;
 % soundsc(sigest,fs);
-audiowrite('C:\Users\admin\Documents\MATLAB\DENOISED\sp03_car_sn15_denoised.wav',sigest,fs);
+audiowrite('C:\Users\admin\Documents\MATLAB\sp01_car_sn15_denoised_nom.wav',sigest,fs);
 
 
 % For showing the interpolation
 noise = syn(noimag,overate);
-signalf = syn(magtil,overate);
+signalf = syn(sigmag,overate);
 figure
 plot(signalf)
 hold on
