@@ -9,8 +9,8 @@
 
 %% READING THE SIGNAL
 
-cleansp1 = audioread('C:\Users\admin\Documents\MATLAB\sp21_train_sn10.wav');        % clean speech
-[rawsig1,fs1] = audioread('C:\Users\admin\Documents\MATLAB\sp21_train_sn10.wav');  % raw signals
+cleansp1 = audioread('C:\Users\admin\Documents\MATLAB\NOISY SIGNALS\Jaiteerth-Kedarx16min.wav');        % clean speech
+[rawsig1,fs1] = audioread('C:\Users\admin\Documents\MATLAB\NOISY SIGNALS\Jaiteerth-Kedarx16min.wav');  % raw signals
 fs = 8000;
 [p,q] = rat(fs/fs1);
 
@@ -18,7 +18,7 @@ fs = 8000;
 rawsig = resample(rawsig1,p,q);
 cleansp = resample(cleansp1,p,q);
 
-% Calling the speec
+
 
 %% SEGMENTATION INTO FRAMES
 
@@ -54,7 +54,7 @@ for k=1:framenum
 end
 D=D/max(D);
 dthresh = 0.05;
-nindex = find(D <= dthresh);
+nindex = find(D <= dthresh);    
 sindex = find(D > dthresh);
 
 % ALGORITHM BASED ON PAPER 11
@@ -98,6 +98,7 @@ end
 
 % modified noise spectrum estimates
 % = original estimates * overestimation factor
+% Taking overeestimation factor = 1 
 
 noimag = noimag * 1;
 % Noisy signal power : sigpow
@@ -108,7 +109,13 @@ noipow = noimag.*noimag;
 
 NSNR = nsnr(sigpow,noipow);
 
+%------------------------------------------------------------------------%
+% Calling the speech_enhancement function. This function calculate the
+% noise masking threshold, and the values of alpha and beta on the basis of
+% psychoacoustic modelling.
 
+%%
+%------------------------------------------------------------------------%
 % Calculating the over-substraction factor : alpha1
 alpha1 = zeros(framenum,1);
 for i = 1:framenum
@@ -139,9 +146,18 @@ for i = 1:framenum
     end
 end
 
-%magtil = sqrt(denoipow); % magnitude of the rogh estimate of the clean speech 
+%magtil = sqrt(denoipow); % magnitude of the rough estimate of the clean speech 
 
+% clean_est is the estimate of the noiseless signal in the frequency
+% domain. clean_est is passed as an argument to the 
+% function speech_enhancement().
+clean_est = sqrt(denoipow);
 % Now we need to introduce masking based on psychoacoustic modelling.
+% The psychoacoustic modelling uses the rough estimete of the clean speech.
+
+%%
+[alpha,beta,G] = speech_enhancement(sqrt(rawsig),fs,noimag);
+
 %% PSYCHOACOUSTIC MASKING 
 maskpow = zeros(winleng,framenum);
 for i = 1:framenum
@@ -153,59 +169,66 @@ for i = 1:framenum
         end
     end
 end
+% The following line calculates alpha and beta based on the masking model.
+% (Refer paper 18)
+% magtil = sqrt(maskpow);
 
-magtil = sqrt(maskpow);
+% The following line calculates a perceptual filter based on the masking
+% model. (Refer paper 26)
+percepfilt = G.*sigmag;
+magtil = percepfilt;
 
+% At a time you can use any one of the above models.
 %% CODE COPIED FRON NOISE_ESTIMATOR_1
 
 
 %% Time-frequency filtering
-index = zeros(2,2);
-a1 = 7;
-a2 = 7;
-b1 = 4;
-b2 = 4;
-lambda = 5;
-m = 0;
-for l = 1:b1:winleng
-    for k = 1:b2:framenum
-        regb = magtil( max(1,l-b1):min(winleng,l+b1), max(1,k-b2):min(framenum,k+b2));
-        rega = magtil( max(1,l-a1):min(winleng,l+a1), max(1,k-a2):min(framenum,k+a2));
-        pb = sum(sum(regb));
-        pa = sum(sum(rega)) - pb;
-        if pb >= lambda*pa
-            m=m+1;
-            index(m,1) = l;
-            index(m,2) = k;
-        end
-    end
-end
-
-for n = 1:m
-    freqbin = index(n,1);
-    frameind = index(n,2);
-    t1 = max(frameind-b2,1);
-    t2 = min(frameind+b2,framenum);
-    f1 = max(freqbin-b1,1);
-    f2 = min(freqbin+b1,winleng);
-    magtil(f1:f2,t1:t2) = zeros(length(f1:f2),length(t1:t2))*10^(-4);
-end
-
-
-%% Additional noise suppression
-for p =1:length(nindex)
-    k = nindex(p);
-    T = sum(magtil(:,k)./noimag(:,k))/winleng;
-    if T < 10^(-0.5)
-        magtil(:,k) = magtil(:,k)*10^(-2);
-    end
-end
-
-%% Smoothing
-delta = 0.9;
-for k=2:framenum
-    magtil(:,k) = ( (1-delta)*magtil(:,k-1).^2+delta*magtil(:,k).^2 ).^(.5);
-end
+% index = zeros(2,2);
+% a1 = 7;
+% a2 = 7;
+% b1 = 4;
+% b2 = 4;
+% lambda = 5;
+% m = 0;
+% for l = 1:b1:winleng
+%     for k = 1:b2:framenum
+%         regb = magtil( max(1,l-b1):min(winleng,l+b1), max(1,k-b2):min(framenum,k+b2));
+%         rega = magtil( max(1,l-a1):min(winleng,l+a1), max(1,k-a2):min(framenum,k+a2));
+%         pb = sum(sum(regb));
+%         pa = sum(sum(rega)) - pb;
+%         if pb >= lambda*pa
+%             m=m+1;
+%             index(m,1) = l;
+%             index(m,2) = k;
+%         end
+%     end
+% end
+% 
+% for n = 1:m
+%     freqbin = index(n,1);
+%     frameind = index(n,2);
+%     t1 = max(frameind-b2,1);
+%     t2 = min(frameind+b2,framenum);
+%     f1 = max(freqbin-b1,1);
+%     f2 = min(freqbin+b1,winleng);
+%     magtil(f1:f2,t1:t2) = zeros(length(f1:f2),length(t1:t2))*10^(-4);
+% end
+% 
+% 
+% %% Additional noise suppression
+% for p =1:length(nindex)
+%     k = nindex(p);
+%     T = sum(magtil(:,k)./noimag(:,k))/winleng;
+%     if T < 10^(-0.5)
+%         magtil(:,k) = magtil(:,k)*10^(-2);
+%     end
+% end
+% 
+% %% Smoothing
+% delta = 0.9;
+% for k=2:framenum
+%     magtil(:,k) = ( (1-delta)*magtil(:,k-1).^2+delta*magtil(:,k).^2 ).^(.5);
+% end
 
 %% Synthesis
 
@@ -235,7 +258,7 @@ snr_out = 10*log(sum(sigest.^2) / sum((rawsig(1:dataleng) - sigest).^2))
 
 % Plot
 t = (1:dataleng)/fs;
-figure(1);
+figure
 subplot(3,1,1), plot(t,cleansp(1:dataleng));
 xlabel('Time (s)');
 title('Clean speech');
@@ -247,7 +270,7 @@ plot(t,sigest);
 xlabel('Time (s)');
 title('Enhanced speech');
 
-figure(2)
+figure
 subplot(3,1,1),specgram(cleansp(1:dataleng),256,fs);
 title('Clean speech');
 subplot(312),specgram(rawsig(1:dataleng),256,fs);
@@ -259,12 +282,12 @@ title('Enhanced speech');
 % soundsc(rawsig,fs);
 % pause;
 % soundsc(sigest,fs);
-audiowrite('C:\Users\admin\Documents\MATLAB\NOISY SIGNALS\buc_5db_denoised.wav',sigest,fs);
+audiowrite('C:\Users\admin\Documents\MATLAB\Jaiteerth-Kedarx16min_denoised_nom.wav',sigest,fs);
 
 
 % For showing the interpolation
 noise = syn(noimag,overate);
-signalf = syn(magtil,overate);
+signalf = syn(sigmag,overate);
 figure
 plot(signalf)
 hold on
