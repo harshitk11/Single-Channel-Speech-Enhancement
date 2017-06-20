@@ -1,7 +1,11 @@
 % Drop me a mail at 'harshitk11@gmail.com' before proceeding with this
 % section, else you'll be doomed for life.
 
-function [alpha,beta,G] = speech_enhancement(signal,fs,noimag)
+% Here 'signal' is the estimate of the clean signal in the frequency
+% domain. Hence, no need to take the fft of the 'signal'.
+% Also the signal is divided into frames. So no need of division into
+% frames.
+function [alpha,beta,G] = speech_enhancement(signal,fs,noimag,rawsig)
 
 % Assuming Noise detection is done. We are now proceeding with the
 % substractive type algorithm.
@@ -10,35 +14,22 @@ function [alpha,beta,G] = speech_enhancement(signal,fs,noimag)
 % [orig,fs] = audioread('sp21_train_sn10.wav');
 orig = signal;
 %----------------------------------------------------------------------%
-% Designing FIR filter for to increase discrimination between speech and
-% noise signals.
-
-% b = [1 -0.95];
-% a = 1;
-% fout = filter(b,a,orig);
-
-fout = orig;
-
-% figure;
-% subplot(211);
-% plot(orig);
 % 
-% title('ORIGINAL SIGNAL');
-% subplot(212);
-% plot(fout);
-% title('FILTERED SIGNAL');
-
-% Dividing the resultant signal into frames
-frame = frames(fout);
-
-%Computing the Fourier Transform of the frames
+% fout = orig;
+% 
+% % Dividing the resultant signal into frames
+% frame = frames(fout);
+% 
+% %Computing the Fourier Transform of the frames
+% % N point fft
+% N = 256;
+% ft = fft(frame,N);
+% % Symmetric signal, so we'll take only the positive frequency side
+% ft_temp = ft;
+% ft = ft(1:128,:);
 % N point fft
 N = 256;
-ft = fft(frame,N);
-% Symmetric signal, so we'll take only the positive frequency side
-ft_temp = ft;
-ft = ft(1:128,:);
-
+ft = signal(1:128,:);
 %Frequency axis
 %----------------------------------------------------------------------%
 df = fs/N;
@@ -270,7 +261,7 @@ t_nom = t./gain;
 tdb_nom = 10*log10(t_nom);
 
 %% FACTORING IN THE VALUES OF ABSOLUTE THRESHOLD
-tdb_abs_bark = abs_threshold(signal);
+tdb_abs_bark = abs_threshold(rawsig);
 tf_bark = zeros(18,framenum);
 for i = 1:framenum
     tf_bark(:,i) = max(tdb_abs_bark,tdb_nom(:,i));
@@ -306,9 +297,11 @@ xlabel('FFT bins');
 
 % Comment the following line if you don't want to use the modification in
 % the threshold calculation.
+
+% Use tf_bark when you want to include the absolute threshold
 %  t_temp = tdb_mod; 
-% t_temp = tdb_nom;
-t_temp = tf_bark;
+t_temp = tdb_nom;
+% t_temp = tf_bark;
 tdb_f = zeros(256,framenum);
 
 for i = 1:framenum
