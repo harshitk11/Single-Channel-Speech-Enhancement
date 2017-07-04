@@ -2,24 +2,30 @@
 % Use the time-frequency filtering to reduce musical noise.
 % NOISE ESTIMATION IS BASED ON PAPER 11
 
-% Most of the code taken from noise_estimator_1.m. Here parameters alpha
-% and beta have been introduced, which is made to change dynamically with
+% Here parameters alpha(Over-estimation factor) and beta (Spectral Floor) have been introduced, which is made to change dynamically with
 % the frames.
 
 
 %% READING THE SIGNAL
 
-cleansp1 = audioread('C:\Users\admin\Documents\MATLAB\sp01.wav');        % clean speech
-[rawsig1,fs1] = audioread('C:\Users\admin\Documents\MATLAB\sp01_car_sn15.wav');  % raw signals
+cleansp1 = audioread('D:\Final_test\sp01.wav');        % clean speech
+[rawsig1,fs1] = audioread('D:\Final_test\sp01_car_sn15.wav');  % raw signals
 fs = 8000;
 [p,q] = rat(fs/fs1);
 
 % Resampling the signal to 8kHz
-rawsig = resample(rawsig1,p,q);
-cleansp = resample(cleansp1,p,q);
+rawsig2 = resample(rawsig1,p,q);
+cleansp2 = resample(cleansp1,p,q);
 
+% While using wavesurfer to record the audio, wave surfer adds a preamble
+% for the first 0.5 seconds (complete silence) which has to be skipped,
+% else the algorithm will fail.
 
+% rawsig = rawsig2(8000:length(rawsig2),1);
+% cleansp = cleansp2(8000:length(rawsig2),1);
 
+rawsig = rawsig2;
+cleansp = cleansp2;
 %% SEGMENTATION INTO FRAMES
 
 winleng = 256;                          % Window length
@@ -90,29 +96,26 @@ end
 % At this point we have an estimete of the noise. Now we need to do
 % spectral substraction. We will vary the value of alpha and beta (as
 % defined in paper 26) to get a rough estimate of the clean speech. After
-% getting the rough estimate of the clean speech pschoacoustic masking will
-% be used to remove the residual musical noise.
-
-% NSNR : Segmental Noisy signal to Noise Ratio
-
+% getting the rough estimate of the clean speech, masking threshold will be
+% calculated fromt the rough estimate of the clean speech.
 
 % modified noise spectrum estimates
 % = original estimates * overestimation factor
 % Taking overeestimation factor = 1 
 
-noimag = noimag * 1;
+% Overestimation factor ov can be varied here depending on the need.
+% Increasing the value of 'ov' will increase noise removal but it will 
+% introduce distortion in the form of musical noise.
+
+ov = 1;
+noimag = noimag * ov;
 % Noisy signal power : sigpow
 % Noise power        : noipow
 
 sigpow = sigmag.*sigmag;
 noipow = noimag.*noimag;
-
+% NSNR : Segmental Noisy signal to Noise Ratio
 NSNR = nsnr(sigpow,noipow);
-
-%------------------------------------------------------------------------%
-% Calling the speech_enhancement function. This function calculate the
-% noise masking threshold, and the values of alpha and beta on the basis of
-% psychoacoustic modelling.
 
 %%
 %------------------------------------------------------------------------%
@@ -132,7 +135,7 @@ end
 % beta should be in the range 0.005 to 0.02
 % Fixing the value of beta to 0.01
 
-beta1 = 0.01;
+beta1 = 0.09;
 
 % denoipow : denoised signal power
 denoipow = zeros(winleng,framenum);
@@ -146,16 +149,26 @@ for i = 1:framenum
     end
 end
 
-%magtil = sqrt(denoipow); % magnitude of the rough estimate of the clean speech 
+
+% Uncomment the following line and comment line 177 if you don't want to
+% use psychoacoustic masking.
+% magtil = sqrt(denoipow); % magnitude of the rough estimate of the clean speech 
 
 % clean_est is the estimate of the noiseless signal in the frequency
 % domain. clean_est is passed as an argument to the 
 % function speech_enhancement().
 clean_est = sqrt(denoipow);
+
+
 % Now we need to introduce masking based on psychoacoustic modelling.
 % The psychoacoustic modelling uses the rough estimete of the clean speech.
 
-%%
+%% CALCULATION OF MASKING THRESHOLD
+
+% Calling the speech_enhancement function. This function calculate the
+% noise masking threshold, and the values of alpha and beta on the basis of
+% psychoacoustic modelling.
+
 [alpha,beta,G] = speech_enhancement(clean_est,fs,noimag,rawsig);
 
 %% PSYCHOACOUSTIC MASKING 
@@ -178,11 +191,14 @@ end
 percepfilt = G.*sigmag;
 magtil = percepfilt;
 
-% At a time you can use any one of the above models.
-%% CODE COPIED FRON NOISE_ESTIMATOR_1
+% At a time you can use any one of the above models (EITHER LINE 180 OR LINE 185).
+% Line 185 yields better results. Line 180 is not yielding better results. 
+% The interpretation of paper 18 (line 180) in this code might not be
+% correct. Please check it.
 
 
-%% Time-frequency filtering
+
+%% TIME FREQUENCY FILTERING
 index = zeros(2,2);
 a1 = 7;
 a2 = 7;
@@ -215,7 +231,7 @@ for n = 1:m
 end
 
 
-%% Additional noise suppression
+%% ADDITIONAL NOISE SUPPRESSION
 for p =1:length(nindex)
     k = nindex(p);
     T = sum(magtil(:,k)./noimag(:,k))/winleng;
@@ -224,13 +240,13 @@ for p =1:length(nindex)
     end
 end
 
-%% Smoothing
+%% SMOOTHING
 delta = 0.9;
 for k=2:framenum
     magtil(:,k) = ( (1-delta)*magtil(:,k-1).^2+delta*magtil(:,k).^2 ).^(.5);
 end
 
-%% Synthesis
+%% SYNTHESIS
 
 % sigest: This is the enhanced speech.
 % rawsig: This is the noisy speech.
@@ -238,18 +254,8 @@ end
 
 sighat = magtil.*exp(1i*sigphase);
 sigest_seg = real( ifft(sighat) );
-% noiest_seg = real( ifft(noimag) );
-% for p =1:length(nindex)
-%     k = nindex(p);
-%     sigest_seg(:,k) = sigest_seg(:,k)*10^(-1);
-% end
 
-% lpccoef = lpc(sigest_seg,13);
-% for k = 1:framenum
-%     sigest2_seg(:,k) = filter([0,-lpccoef(k,2:end)],1,sigest_seg(:,k));
-% end
-% 
-sigest = real(syn(sigest_seg,overate));
+sigest = 1.5 * real(syn(sigest_seg,overate));
 % noiest = real(syn(noiest_seg,overate));
 
 snr_out = 10*log(sum(sigest.^2) / sum((rawsig(1:dataleng) - sigest).^2))
@@ -278,11 +284,8 @@ title('Noisy speech');
 subplot(313),
 specgram(sigest,256,fs);
 title('Enhanced speech');
-% soundsc(cleansp,fs);
-% soundsc(rawsig,fs);
-% pause;
-% soundsc(sigest,fs);
-audiowrite('C:\Users\admin\Documents\MATLAB\sp01_car_sn15_denoised_nom.wav',sigest,fs);
+
+audiowrite('D:\Final_test\sp01_car_sn15_denoised.wav',sigest,fs);
 
 
 % For showing the interpolation
@@ -292,5 +295,5 @@ figure
 plot(signalf)
 hold on
 plot(noise)
-title('NOISE CURVE (INTERPOLATION DONE IN THE FREQUENCY DOMAIN');
-legend('NOISE CURVE','STFT of the noisy signal');
+title('NOISE CURVE (INTERPOLATION DONE IN THE FREQUENCY DOMAIN)');
+legend('SIGNAL','INTERPOLATION OF THE NOISE');
