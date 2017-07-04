@@ -5,7 +5,7 @@
 function snr = nsnr(nsignal, noise)
 
 % nsignal : power of the noisy signal
-% noise : power of the estimatef noise
+% noise : power of the estimated noise
 
 x = size(nsignal);
 framesize = x(1);

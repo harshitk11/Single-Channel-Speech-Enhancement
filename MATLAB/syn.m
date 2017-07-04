@@ -1,6 +1,5 @@
 function y = syn(y_seg,overate)
-
-%% To synthesis signals from signal segments
+% To synthesis signals from signal segments
 
 [winleng,framenum] = size(y_seg);
 dataleng = winleng*(1-overate)*(framenum - 1) + winleng;

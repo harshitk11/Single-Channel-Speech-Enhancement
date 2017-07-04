@@ -1,7 +1,7 @@
 function err = lpe(x,order)
-%% Linear Prediction Error normalized with respect to the energy of the
-%% signal. 
-%% order = linear prediction order
+% Linear Prediction Error normalized with respect to the energy of the
+% signal. 
+% order = linear prediction order
 
 a = lpc(x,order);
 est_x = filter([0 -a(2:end)],1,x);      % Estimated signal
