@@ -1,5 +1,5 @@
 # Single-Channel Speech Enhancement
-Speech enhancement algorithm inspired by the human auditory system to remove background noise in audio signals. A detailed report of the entire code base can be found [here](MATLAB/Report.docx).
+Speech enhancement algorithm inspired by the human auditory system to remove background noise in audio signals. A detailed report of the entire code base can be found [here](Report.docx).
 
 ## Usage
 Main code is [adapSpecOver.m](MATLAB/adapSpecOver.m)
